@@ -3,384 +3,207 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Lightsaber Camera</title>
+<title>Lightsaber AR Camera</title>
 <style>
-:root,[data-theme="light"]{--color-bg:#f7f6f2;--color-surface:#f9f8f5;--color-text:#28251d;--color-text-muted:#7a7974;--color-primary:#01696f;--color-border:#d4d1ca;}
-[data-theme="dark"]{--color-bg:#0a0a0f;--color-surface:#12121a;--color-text:#e0e0f0;--color-text-muted:#7a7996;--color-primary:#4f98a3;--color-border:#2a2a3a;}
+:root{--color-bg:#0a0a0f;--color-surface:#12121a;--color-text:#e0e0ff;--color-text-muted:#7a7996;--color-primary:#4f98e3;--color-border:#1a1a2e;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',sans-serif;}
-
 #app{width:100vw;height:100vh;display:flex;flex-direction:column;background:#000;position:relative;}
-
 #camera-container{position:relative;flex:1;overflow:hidden;background:#000;}
 #video{width:100%;height:100%;object-fit:cover;display:block;}
 #canvas-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-
 #saber-wrapper{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);cursor:grab;touch-action:none;user-select:none;width:16px;}
 #saber-wrapper:active{cursor:grabbing;}
-#saber{
-  width:16px;
-  height:200px;
-  position:relative;
-  transform-origin:bottom center;
+#saber{width:16px;position:relative;transform-origin:bottom center;}
+#blade{width:100%;height:180px;border-radius:8px 8px 2px 2px;background:linear-gradient(to top,#fff 0%,#00f0ff 30%,#00aff 70%,transparent 100%);box-shadow:0 0 8px #00ccff,0 0 20px 8px #0088ff88,0 0 40px 16px #0044ff44;animation:flicker 0.12s infinite alternate;}
+#hilt{width:22px;height:64px;border-radius:4px;background:linear-gradient(135deg,#888,#333,#999,#444);border:3px solid #aaa;position:absolute;bottom:-44px;left:50%;transform:translateX(-50%);}
+box-shadow:0 0 6px #0008;
 }
-#blade{
-  width:100%;
-  height:100%;
-  border-radius:8px 8px 2px 2px;
-  background:linear-gradient(to top,#fff 0%,#00f0ff 30%,#00aaff 70%,transparent 100%);
-  box-shadow:0 0 8px 4px #00ccff,0 0 20px 8px #0088ff88,0 0 40px 16px #0044ff44;
-  animation:flicker 0.12s infinite alternate;
-}
-#hilt{
-  width:22px;
-  height:44px;
-  border-radius:4px;
-  background:linear-gradient(135deg,#888,#333,#999,#444);
-  border:1px solid #aaa;
-  position:absolute;
-  bottom:-44px;
-  left:50%;
-  transform:translateX(-50%);
-  box-shadow:0 0 6px #0008;
-}
-#hilt::after{content:'';position:absolute;top:8px;left:3px;right:3px;height:4px;background:#222;border-radius:2px;box-shadow:0 8px 0 #222,0 16px 0 #222;}
-
-@keyframes flicker{0%{opacity:1;}100%{opacity:0.88;box-shadow:0 0 6px 3px #00bbff,0 0 16px 6px #0077ff88;}}
-
-#color-panel{position:absolute;top:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:10;}
-.color-btn{width:32px;height:32px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color 0.2s;}
+@keyframes flicker{0%{opacity:1}100%{opacity:0.88}}
+.color-btn{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
 .color-btn.active{border-color:#fff;}
-#color-blue{background:#0af;}
-#color-red{background:#f22;}
-#color-green{background:#0f4;}
-#color-purple{background:#a4f;}
-#color-yellow{background:#ff0;}
-
-#controls{position:absolute;bottom:0;left:0;right:0;padding:16px;display:flex;justify-content:space-around;align-items:center;background:linear-gradient(transparent,rgba(0,0,0,0.8));z-index:10;}
-
-.ctrl-btn{
-  background:rgba(255,255,255,0.12);
-  border:1px solid rgba(255,255,255,0.2);
-  color:#fff;
-  padding:12px 20px;
-  border-radius:32px;
-  font-size:14px;
-  cursor:pointer;
-  transition:background 0.2s;
-  display:flex;align-items:center;gap:8px;
-  backdrop-filter:blur(8px);
-}
-.ctrl-btn:active{background:rgba(255,255,255,0.25);}
-.ctrl-btn svg{width:20px;height:20px;}
-
-#capture-btn{
-  background:rgba(255,255,255,0.15);
-  border:3px solid #fff;
-  width:70px;height:70px;
-  border-radius:50%;
-  padding:0;
-  position:relative;
-}
-#capture-btn::after{content:'';width:56px;height:56px;background:#fff;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:transform 0.1s;}
-#capture-btn:active::after{transform:translate(-50%,-50%) scale(0.85);}
-
-#saber-toggle{font-size:18px;}
-
-#flash{position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;opacity:0;pointer-events:none;z-index:20;transition:opacity 0.05s;}
-
-#result-modal{
-  display:none;
-  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);
-  z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:16px;
-}
-#result-modal.open{display:flex;}
-#result-img{max-width:100%;max-height:60vh;border-radius:12px;box-shadow:0 0 40px #0088ff66;}
-.modal-actions{display:flex;gap:12px;}
-.modal-btn{padding:12px 24px;border-radius:32px;border:none;font-size:15px;cursor:pointer;font-weight:600;}
-#download-btn{background:#0af;color:#000;}
-#close-btn{background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);}
-
-#status{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;pointer-events:none;backdrop-filter:blur(4px);white-space:nowrap;}
-
-#rotate-hint{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.5);font-size:12px;text-align:center;pointer-events:none;}
+.color-blue{background:#00aff;}
+.color-red{background:#f00;}
+.color-green{background:#0f0;}
+.color-purple{background:#a0f;}
+.color-yellow{background:#ff0;}
+#hud{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+.hud-corner{position:absolute;width:40px;height:40px;}
+.hud-corner::before,.hud-corner::after{content:'';position:absolute;background:#0ff;box-shadow:0 0 10px #0ff;}
+.hud-corner::before{width:20px;height:2px;}
+.hud-corner::after{width:2px;height:20px;}
+.hud-top-left{top:20px;left:20px;}
+.hud-top-left::before{top:0;left:0;}
+.hud-top-left::after{top:0;left:0;}
+.hud-top-right{top:20px;right:20px;}
+.hud-top-right::before{top:0;right:0;}
+.hud-top-right::after{top:0;right:0;}
+.hud-bottom-left{bottom:20px;left:20px;}
+.hud-bottom-left::before{bottom:0;left:0;}
+.hud-bottom-left::after{bottom:0;left:0;}
+.hud-bottom-right{bottom:20px;right:20px;}
+.hud-bottom-right::before{bottom:0;right:0;}
+.hud-bottom-right::after{bottom:0;right:0;}
+#controls{position:absolute;bottom:40px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:20px;pointer-events:all;z-index:20;}
+#color-selector{display:flex;gap:12px;}
+.btn-group{display:flex;gap:12px;}
+.btn{padding:12px 24px;background:linear-gradient(135deg,#333,#111);color:#fff;border:2px solid #0ff;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px;box-shadow:0 0 20px #0ff4;}
+.btn:active{transform:scale(0.95);}
+.btn-capture{background:linear-gradient(135deg,#0ff,#08f);border-color:#0ff;}
+#start-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#000,#001a2e);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+#start-screen h1{font-size:48px;color:#0ff;text-shadow:0 0 20px #0ff;margin-bottom:20px;text-transform:uppercase;letter-spacing:4px;}
+#start-screen .subtitle{font-size:18px;color:#7af;margin-bottom:60px;}
+#start-btn{padding:20px 60px;font-size:24px;}
 </style>
 </head>
 <body>
 <div id="app">
-  <div id="camera-container">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas-overlay"></canvas>
-
-    <div id="saber-wrapper">
-      <div id="saber">
-        <div id="blade"></div>
-        <div id="hilt"></div>
-      </div>
-    </div>
-
-    <div id="color-panel">
-      <div class="color-btn active" id="color-blue" data-color="blue" title="Bleu"></div>
-      <div class="color-btn" id="color-red" data-color="red" title="Rouge"></div>
-      <div class="color-btn" id="color-green" data-color="green" title="Vert"></div>
-      <div class="color-btn" id="color-purple" data-color="purple" title="Violet"></div>
-      <div class="color-btn" id="color-yellow" data-color="yellow" title="Jaune"></div>
-    </div>
-
-    <div id="status">📷 Chargement caméra...</div>
-    <div id="rotate-hint">↔ Glisse pour déplacer · Pince pour tourner</div>
-    <div id="flash"></div>
-  </div>
-
-  <div id="controls">
-    <button class="ctrl-btn" id="flip-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4m0 0l4-4M4 7l4 4M4 17h16m0 0l-4-4m4 4l-4 4"/></svg>
-      Retourner
-    </button>
-    <button class="ctrl-btn" id="capture-btn" title="Prendre une photo"></button>
-    <button class="ctrl-btn" id="saber-toggle">⚔️ Sabre</button>
-  </div>
+<div id="start-screen">
+<h1>Lightsaber AR</h1>
+<p class="subtitle">Activate your camera</p>
+<button class="btn btn-capture" id="start-btn">START</button>
 </div>
-
-<div id="result-modal">
-  <img id="result-img" alt="Photo capturée">
-  <div class="modal-actions">
-    <button class="modal-btn" id="download-btn">💾 Télécharger</button>
-    <button class="modal-btn" id="close-btn">✕ Fermer</button>
-  </div>
+<div id="camera-container" style="display:none;">
+<video id="video" playsinline autoplay></video>
+<canvas id="canvas-overlay"></canvas>
+<div id="hud">
+<div class="hud-corner hud-top-left"></div>
+<div class="hud-corner hud-top-right"></div>
+<div class="hud-corner hud-bottom-left"></div>
+<div class="hud-corner hud-bottom-right"></div>
 </div>
-
+<div id="saber-wrapper">
+<div id="saber">
+<div id="blade"></div>
+<div id="hilt"></div>
+</div>
+</div>
+</div>
+<div id="controls" style="display:none;">
+<div id="color-selector">
+<div class="color-btn color-blue active" data-color="blue"></div>
+<div class="color-btn color-red" data-color="red"></div>
+<div class="color-btn color-green" data-color="green"></div>
+<div class="color-btn color-purple" data-color="purple"></div>
+<div class="color-btn color-yellow" data-color="yellow"></div>
+</div>
+<div class="btn-group">
+<button class="btn btn-capture" id="capture-btn">CAPTURE</button>
+</div>
+</div>
+</div>
 <script>
-const video = document.getElementById('video');
-const saberWrapper = document.getElementById('saber-wrapper');
-const bladeEl = document.getElementById('blade');
-const statusEl = document.getElementById('status');
-const flashEl = document.getElementById('flash');
-const resultModal = document.getElementById('result-modal');
-const resultImg = document.getElementById('result-img');
-
-const COLORS = {
-  blue:   {grad:'linear-gradient(to top,#fff 0%,#00f0ff 30%,#00aaff 70%,transparent 100%)',glow:'#00ccff,#0088ff88,#0044ff44'},
-  red:    {grad:'linear-gradient(to top,#fff 0%,#ff3030 30%,#ff0000 70%,transparent 100%)',glow:'#ff4444,#ff000088,#ff000044'},
-  green:  {grad:'linear-gradient(to top,#fff 0%,#00ff88 30%,#00dd00 70%,transparent 100%)',glow:'#00ff88,#00cc0088,#00aa0044'},
-  purple: {grad:'linear-gradient(to top,#fff 0%,#dd88ff 30%,#aa00ff 70%,transparent 100%)',glow:'#cc66ff,#9900ff88,#6600ff44'},
-  yellow: {grad:'linear-gradient(to top,#fff 0%,#ffff00 30%,#ffcc00 70%,transparent 100%)',glow:'#ffff44,#ffcc0088,#ffaa0044'},
+const video=document.getElementById('video');
+const canvas=document.getElementById('canvas-overlay');
+const ctx=canvas.getContext('2d');
+const saberWrapper=document.getElementById('saber-wrapper');
+const blade=document.getElementById('blade');
+const startScreen=document.getElementById('start-screen');
+const cameraContainer=document.getElementById('camera-container');
+const controls=document.getElementById('controls');
+const startBtn=document.getElementById('start-btn');
+const captureBtn=document.getElementById('capture-btn');
+const colorBtns=document.querySelectorAll('.color-btn');
+let currentColor='blue';
+const colors={
+blue:{gradient:'linear-gradient(to top,#fff 0%,#00f0ff 30%,#00aff 70%,transparent 100%)',glow:'#00ccff'},
+red:{gradient:'linear-gradient(to top,#fff 0%,#ff4040 30%,#f00 70%,transparent 100%)',glow:'#ff0000'},
+green:{gradient:'linear-gradient(to top,#fff 0%,#40ff40 30%,#0f0 70%,transparent 100%)',glow:'#00ff00'},
+purple:{gradient:'linear-gradient(to top,#fff 0%,#d040ff 30%,#a0f 70%,transparent 100%)',glow:'#aa00ff'},
+yellow:{gradient:'linear-gradient(to top,#fff 0%,#ffff40 30%,#ff0 70%,transparent 100%)',glow:'#ffff00'}
 };
-let currentColor = 'blue';
-let saberVisible = true;
-let saberX = window.innerWidth / 2;
-let saberY = window.innerHeight / 2;
-let saberAngle = 0;
-let useFrontCamera = false;
-let stream = null;
-
-async function startCamera(front = false) {
-  if (stream) stream.getTracks().forEach(t => t.stop());
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: front ? 'user' : 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false
-    });
-    video.srcObject = stream;
-    await video.play();
-    statusEl.textContent = '✅ Prêt · Glisse le sabre !';
-    setTimeout(() => { statusEl.style.opacity = '0'; }, 2000);
-  } catch(e) {
-    statusEl.textContent = '❌ Caméra inaccessible';
-  }
+function setBladeColor(color){
+currentColor=color;
+const c=colors[color];
+blade.style.background=c.gradient;
+blade.style.boxShadow=`0 0 8px ${c.glow},0 0 20px 8px ${c.glow}88,0 0 40px 16px ${c.glow}44`;
 }
-
-function applyColor(name) {
-  currentColor = name;
-  const c = COLORS[name];
-  bladeEl.style.background = c.grad;
-  const [g1, g2, g3] = c.glow.split(',');
-  bladeEl.style.boxShadow = `0 0 8px 4px ${g1},0 0 20px 8px ${g2},0 0 40px 16px ${g3}`;
-  document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('color-' + name).classList.add('active');
+colorBtns.forEach(btn=>{
+btn.addEventListener('click',()=>{
+colorBtns.forEach(b=>b.classList.remove('active'));
+btn.classList.add('active');
+setBladeColor(btn.dataset.color);
+});
+});
+let mouseX=window.innerWidth/2,mouseY=window.innerHeight/2;
+function updateSaberPosition(x,y){
+saberWrapper.style.left=x+'px';
+saberWrapper.style.top=y+'px';
+saberWrapper.style.transform='translate(-50%,-50%)';
 }
-
-function updateSaberPosition() {
-  saberWrapper.style.left = saberX + 'px';
-  saberWrapper.style.top = saberY + 'px';
-  saberWrapper.style.transform = `translate(-50%, -50%) rotate(${saberAngle}deg)`;
+document.addEventListener('mousemove',e=>{
+mouseX=e.clientX;
+mouseY=e.clientY;
+updateSaberPosition(mouseX,mouseY);
+});
+document.addEventListener('touchmove',e=>{
+if(e.touches.length>0){
+const touch=e.touches[0];
+mouseX=touch.clientX;
+mouseY=touch.clientY;
+updateSaberPosition(mouseX,mouseY);
 }
-
-let isDragging = false;
-let dragOffX = 0, dragOffY = 0;
-let lastTouchAngle = null;
-let activeTouches = [];
-
-function getTouchAngle(t1, t2) {
-  return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+},{passive:false});
+startBtn.addEventListener('click',async()=>{
+try{
+const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+video.srcObject=stream;
+startScreen.style.display='none';
+cameraContainer.style.display='block';
+controls.style.display='flex';
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+}catch(err){
+alert('Camera access denied');
 }
-
-saberWrapper.addEventListener('touchstart', e => {
-  e.preventDefault();
-  activeTouches = Array.from(e.touches);
-  if (activeTouches.length === 1) {
-    isDragging = true;
-    dragOffX = activeTouches[0].clientX - saberX;
-    dragOffY = activeTouches[0].clientY - saberY;
-    lastTouchAngle = null;
-  } else if (activeTouches.length === 2) {
-    isDragging = false;
-    lastTouchAngle = getTouchAngle(activeTouches[0], activeTouches[1]);
-  }
-}, {passive:false});
-
-document.addEventListener('touchmove', e => {
-  activeTouches = Array.from(e.touches);
-  if (activeTouches.length === 1 && isDragging) {
-    saberX = activeTouches[0].clientX - dragOffX;
-    saberY = activeTouches[0].clientY - dragOffY;
-    updateSaberPosition();
-  } else if (activeTouches.length === 2 && lastTouchAngle !== null) {
-    const angle = getTouchAngle(activeTouches[0], activeTouches[1]);
-    saberAngle += angle - lastTouchAngle;
-    lastTouchAngle = angle;
-    saberX = (activeTouches[0].clientX + activeTouches[1].clientX) / 2;
-    saberY = (activeTouches[0].clientY + activeTouches[1].clientY) / 2;
-    updateSaberPosition();
-  }
-}, {passive:true});
-
-document.addEventListener('touchend', e => {
-  activeTouches = Array.from(e.touches);
-  if (activeTouches.length === 0) { isDragging = false; lastTouchAngle = null; }
-  else if (activeTouches.length === 1) {
-    isDragging = true;
-    dragOffX = activeTouches[0].clientX - saberX;
-    dragOffY = activeTouches[0].clientY - saberY;
-  }
-}, {passive:true});
-
-saberWrapper.addEventListener('mousedown', e => {
-  isDragging = true;
-  dragOffX = e.clientX - saberX;
-  dragOffY = e.clientY - saberY;
 });
-document.addEventListener('mousemove', e => {
-  if (!isDragging) return;
-  saberX = e.clientX - dragOffX;
-  saberY = e.clientY - dragOffY;
-  updateSaberPosition();
+captureBtn.addEventListener('click',()=>{
+const captureCanvas=document.createElement('canvas');
+captureCanvas.width=video.videoWidth;
+captureCanvas.height=video.videoHeight;
+const captureCtx=captureCanvas.getContext('2d');
+captureCtx.drawImage(video,0,0);
+const rect=saberWrapper.getBoundingClientRect();
+const videoRect=video.getBoundingClientRect();
+const scaleX=video.videoWidth/videoRect.width;
+const scaleY=video.videoHeight/videoRect.height;
+const saberX=(rect.left+rect.width/2-videoRect.left)*scaleX;
+const saberY=(rect.top+rect.height/2-videoRect.top)*scaleY;
+const bladeHeight=180*Math.min(scaleX,scaleY);
+const bladeWidth=16*Math.min(scaleX,scaleY);
+const c=colors[currentColor];
+const gradient=captureCtx.createLinearGradient(saberX,saberY,saberX,saberY-bladeHeight);
+gradient.addColorStop(0,'#ffffff');
+if(currentColor==='blue'){gradient.addColorStop(0.3,'#00f0ff');gradient.addColorStop(0.7,'#00aaff');}
+else if(currentColor==='red'){gradient.addColorStop(0.3,'#ff4040');gradient.addColorStop(0.7,'#ff0000');}
+else if(currentColor==='green'){gradient.addColorStop(0.3,'#40ff40');gradient.addColorStop(0.7,'#00ff00');}
+else if(currentColor==='purple'){gradient.addColorStop(0.3,'#d040ff');gradient.addColorStop(0.7,'#aa00ff');}
+else if(currentColor==='yellow'){gradient.addColorStop(0.3,'#ffff40');gradient.addColorStop(0.7,'#ffff00');}
+gradient.addColorStop(1,'rgba(0,0,0,0)');
+captureCtx.shadowBlur=40;
+captureCtx.shadowColor=c.glow;
+captureCtx.fillStyle=gradient;
+captureCtx.fillRect(saberX-bladeWidth/2,saberY-bladeHeight,bladeWidth,bladeHeight);
+const hiltHeight=64*Math.min(scaleX,scaleY);
+const hiltWidth=22*Math.min(scaleX,scaleY);
+captureCtx.shadowBlur=0;
+const hiltGrad=captureCtx.createLinearGradient(saberX,saberY,saberX,saberY+hiltHeight);
+hiltGrad.addColorStop(0,'#888888');
+hiltGrad.addColorStop(0.25,'#333333');
+hiltGrad.addColorStop(0.5,'#999999');
+hiltGrad.addColorStop(0.75,'#444444');
+hiltGrad.addColorStop(1,'#666666');
+captureCtx.fillStyle=hiltGrad;
+captureCtx.fillRect(saberX-hiltWidth/2,saberY,hiltWidth,hiltHeight);
+captureCanvas.toBlob(blob=>{
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download='lightsaber_'+Date.now()+'.jpg';
+a.click();
+URL.revokeObjectURL(url);
 });
-document.addEventListener('mouseup', () => isDragging = false);
-saberWrapper.addEventListener('wheel', e => {
-  saberAngle += e.deltaY * 0.3;
-  updateSaberPosition();
 });
-
-document.querySelectorAll('.color-btn').forEach(btn => {
-  btn.addEventListener('click', () => applyColor(btn.dataset.color));
-});
-
-document.getElementById('flip-btn').addEventListener('click', () => {
-  useFrontCamera = !useFrontCamera;
-  startCamera(useFrontCamera);
-});
-
-document.getElementById('saber-toggle').addEventListener('click', () => {
-  saberVisible = !saberVisible;
-  saberWrapper.style.display = saberVisible ? '' : 'none';
-});
-
-document.getElementById('capture-btn').addEventListener('click', () => {
-  flashEl.style.opacity = '1';
-  setTimeout(() => flashEl.style.opacity = '0', 150);
-
-  const vw = video.videoWidth || video.offsetWidth;
-  const vh = video.videoHeight || video.offsetHeight;
-  const dw = video.offsetWidth;
-  const dh = video.offsetHeight;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = vw;
-  canvas.height = vh;
-  const ctx = canvas.getContext('2d');
-
-  if (useFrontCamera) { ctx.translate(vw, 0); ctx.scale(-1, 1); }
-  ctx.drawImage(video, 0, 0, vw, vh);
-  if (useFrontCamera) { ctx.setTransform(1,0,0,1,0,0); }
-
-  if (saberVisible) {
-    const scaleX = vw / dw;
-    const scaleY = vh / dh;
-    const cx = saberX * scaleX;
-    const cy = saberY * scaleY;
-    const angle = saberAngle * Math.PI / 180;
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-
-    const sw = 16 * scaleX;
-    const sh = 200 * scaleY;
-    const hh = 44 * scaleY;
-    const hw = 22 * scaleX;
-
-    const c = COLORS[currentColor];
-    const glowColors = c.glow.split(',');
-
-    const glowGrad = ctx.createLinearGradient(0, -sh, 0, 0);
-    glowGrad.addColorStop(0, 'transparent');
-    glowGrad.addColorStop(0.3, glowColors[1] || '#0088ff88');
-    glowGrad.addColorStop(0.7, glowColors[0] || '#00ccff');
-    glowGrad.addColorStop(1, '#fff');
-    ctx.shadowColor = glowColors[0];
-    ctx.shadowBlur = 30 * scaleX;
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.roundRect(-sw/2, -sh, sw, sh, [sw/2, sw/2, 4, 4]);
-    ctx.fill();
-
-    ctx.shadowBlur = 10 * scaleX;
-    const coreGrad = ctx.createLinearGradient(0, -sh, 0, 0);
-    coreGrad.addColorStop(0, 'transparent');
-    coreGrad.addColorStop(0.4, 'rgba(255,255,255,0.6)');
-    coreGrad.addColorStop(1, '#fff');
-    ctx.fillStyle = coreGrad;
-    ctx.beginPath();
-    ctx.roundRect(-sw/4, -sh, sw/2, sh, [sw/4, sw/4, 2, 2]);
-    ctx.fill();
-
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    const hiltGrad = ctx.createLinearGradient(-hw/2, 0, hw/2, 0);
-    hiltGrad.addColorStop(0, '#666');
-    hiltGrad.addColorStop(0.3, '#999');
-    hiltGrad.addColorStop(0.7, '#444');
-    hiltGrad.addColorStop(1, '#888');
-    ctx.fillStyle = hiltGrad;
-    ctx.beginPath();
-    ctx.roundRect(-hw/2, 0, hw, hh, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#aaa';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  resultImg.src = dataUrl;
-  resultModal.classList.add('open');
-});
-
-document.getElementById('download-btn').addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = resultImg.src;
-  a.download = 'lightsaber_' + Date.now() + '.jpg';
-  a.click();
-});
-
-document.getElementById('close-btn').addEventListener('click', () => {
-  resultModal.classList.remove('open');
-});
-
-updateSaberPosition();
-startCamera(false);
 </script>
 </body>
 </html>
