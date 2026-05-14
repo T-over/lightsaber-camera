@@ -275,7 +275,7 @@ input[type=range]::-webkit-slider-thumb {
     </div>
     <div id="slider-row">
       <span>Lame</span>
-      <input type="range" id="slider" min="80" max="340" value="200">
+      <input type="range" id="slider" min="80" max="340" value="280">
     </div>
     <div id="action-row">
       <button class="btn btn-icon" id="flip-btn">⟳</button>
@@ -315,12 +315,12 @@ let col    = 'blue';
 let facing = 'environment';
 let strm   = null;
 let sndOn  = true;
-let blade  = 200;
+let blade  = 280;
 let capBlob= null;
 let camOn  = false;
 
 // Saber physics
-let cx = innerWidth/2, cy = innerHeight/2;
+let cx = innerWidth/2, cy = innerHeight * 0.65;
 let px = cx, py = cy;
 let vx = 0, vy = 0;
 let ang = 0;
@@ -384,28 +384,44 @@ function rRect(ctx, x, y, w, h, r) {
    DRAW BLADE (canvas-based, multi-layer)
 ══════════════════════════════════════════════════════════ */
 function drawBlade(ctx, bh, c, t, alpha) {
-  const fl = (0.93 + Math.sin(t*43.7)*0.04 + Math.sin(t*19.1)*0.03) * alpha;
-  const sc2 = bh / 200; // scale factor relative to reference length
+  const fl = (0.90 + Math.sin(t*43.7)*0.06 + Math.sin(t*19.1)*0.04) * alpha;
 
-  // ── Layer 1: wide diffuse glow (4 passes) ──
-  for (const [hw, a] of [[32,0.05],[22,0.10],[14,0.18],[8.5,0.30]]) {
+  // ── GLOW : blending additif (lighter) — les couches s'accumulent ──
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // 5 passes de glow de plus en plus concentrées
+  for (const [hw, a] of [[60,0.06],[44,0.12],[30,0.20],[18,0.32],[10,0.48]]) {
     const g = ctx.createLinearGradient(0, 0, 0, -bh);
     g.addColorStop(0,    h2r(c.glow, a * fl));
-    g.addColorStop(0.78, h2r(c.glow, a * 0.35 * fl));
+    g.addColorStop(0.76, h2r(c.glow, a * 0.30 * fl));
     g.addColorStop(1,    'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     rRect(ctx, -hw, -bh, hw*2, bh, hw);
     ctx.fill();
   }
 
-  // ── Layer 2: colored blade body (horizontal 3D shading) ──
-  const bw = 6 * Math.min(sc2 * 0.5 + 0.5, 1.4);
+  // Orbe au bout (additif)
+  const ty  = -bh;
+  const tr2 = 10 + Math.sin(t * 26.3) * 2.5;
+  const og  = ctx.createRadialGradient(0, ty, 0, 0, ty, tr2 * 5);
+  og.addColorStop(0,    `rgba(255,255,255,${0.95*fl})`);
+  og.addColorStop(0.20, h2r(c.mid1, 0.88 * fl));
+  og.addColorStop(0.55, h2r(c.glow,  0.55 * fl));
+  og.addColorStop(1,    'rgba(0,0,0,0)');
+  ctx.fillStyle = og;
+  ctx.fillRect(-tr2*5, ty-tr2*5, tr2*10, tr2*10);
+
+  ctx.restore(); // fin du blending additif
+
+  // ── Corps de lame (ombrage cylindrique horizontal) ──
+  const bw = 10;
   const hg = ctx.createLinearGradient(-bw, 0, bw, 0);
-  hg.addColorStop(0,    h2r(c.mid2, 0.60));
-  hg.addColorStop(0.25, h2r(c.mid1, 0.92));
-  hg.addColorStop(0.50, `rgba(255,255,255,0.96)`);
-  hg.addColorStop(0.75, h2r(c.mid1, 0.92));
-  hg.addColorStop(1,    h2r(c.mid2, 0.60));
+  hg.addColorStop(0,    h2r(c.mid2, 0.70));
+  hg.addColorStop(0.22, h2r(c.mid1, 0.96));
+  hg.addColorStop(0.50, 'rgba(255,255,255,0.99)');
+  hg.addColorStop(0.78, h2r(c.mid1, 0.96));
+  hg.addColorStop(1,    h2r(c.mid2, 0.70));
   ctx.save();
   ctx.globalAlpha = fl;
   ctx.fillStyle = hg;
@@ -413,40 +429,33 @@ function drawBlade(ctx, bh, c, t, alpha) {
   ctx.fill();
   ctx.restore();
 
-  // ── Layer 3: white-hot inner core ──
-  const cw = 2.2;
+  // ── Core blanc-chaud ──
+  const cw = 3;
   const vg = ctx.createLinearGradient(0, 0, 0, -bh);
-  vg.addColorStop(0,    `rgba(255,255,255,${0.97*fl})`);
-  vg.addColorStop(0.82, `rgba(255,255,255,${0.55*fl})`);
+  vg.addColorStop(0,    `rgba(255,255,255,${0.99*fl})`);
+  vg.addColorStop(0.84, `rgba(255,255,255,${0.62*fl})`);
   vg.addColorStop(1,    'rgba(255,255,255,0)');
   ctx.fillStyle = vg;
   rRect(ctx, -cw, -bh, cw*2, bh, cw);
   ctx.fill();
-
-  // ── Layer 4: pulsating tip orb ──
-  const ty = -bh;
-  const tr2 = (5.5 + Math.sin(t * 26.3) * 1.5) * Math.min(sc2 * 0.6 + 0.4, 1.3);
-  const og = ctx.createRadialGradient(0, ty, 0, 0, ty, tr2 * 3.5);
-  og.addColorStop(0,    `rgba(255,255,255,${0.95*fl})`);
-  og.addColorStop(0.30, h2r(c.mid1, 0.78 * fl));
-  og.addColorStop(0.65, h2r(c.glow, 0.30 * fl));
-  og.addColorStop(1,    'rgba(0,0,0,0)');
-  ctx.fillStyle = og;
-  ctx.fillRect(-tr2*3.5, ty-tr2*3.5, tr2*7, tr2*7);
 }
 
 /* ══════════════════════════════════════════════════════════
    DRAW BLADE (fast trail version)
 ══════════════════════════════════════════════════════════ */
 function drawBladeFast(ctx, bh, c, a) {
-  const hw = 14;
-  const g = ctx.createLinearGradient(0, 0, 0, -bh);
-  g.addColorStop(0,   h2r(c.glow, a));
-  g.addColorStop(0.8, h2r(c.glow, a * 0.3));
-  g.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  rRect(ctx, -hw, -bh, hw*2, bh, hw);
-  ctx.fill();
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const [hw, fa] of [[32, a*0.5],[18, a*0.8],[10, a]]) {
+    const g = ctx.createLinearGradient(0, 0, 0, -bh);
+    g.addColorStop(0,   h2r(c.glow, fa));
+    g.addColorStop(0.8, h2r(c.glow, fa * 0.25));
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    rRect(ctx, -hw, -bh, hw*2, bh, hw);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 /* ══════════════════════════════════════════════════════════
