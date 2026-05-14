@@ -1,209 +1,710 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="dark">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#00050f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Caméra AR avec sabre laser — prends des photos épiques">
 <title>Lightsaber AR Camera</title>
 <style>
-:root{--color-bg:#0a0a0f;--color-surface:#12121a;--color-text:#e0e0ff;--color-text-muted:#7a7996;--color-primary:#4f98e3;--color-border:#1a1a2e;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',sans-serif;}
-#app{width:100vw;height:100vh;display:flex;flex-direction:column;background:#000;position:relative;}
-#camera-container{position:relative;flex:1;overflow:hidden;background:#000;}
-#video{width:100%;height:100%;object-fit:cover;display:block;}
-#canvas-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-#saber-wrapper{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);cursor:grab;touch-action:none;user-select:none;width:16px;}
-#saber-wrapper:active{cursor:grabbing;}
-#saber{width:16px;position:relative;transform-origin:bottom center;}
-#blade{width:100%;height:180px;border-radius:8px 8px 2px 2px;background:linear-gradient(to top,#fff 0%,#00f0ff 30%,#00aff 70%,transparent 100%);box-shadow:0 0 8px #00ccff,0 0 20px 8px #0088ff88,0 0 40px 16px #0044ff44;animation:flicker 0.12s infinite alternate;}
-#hilt{width:22px;height:64px;border-radius:4px;background:linear-gradient(135deg,#888,#333,#999,#444);border:3px solid #aaa;position:absolute;bottom:-44px;left:50%;transform:translateX(-50%);}
-box-shadow:0 0 6px #0008;
+:root { --cyan: #00e5ff; --blade-h: 200px; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden; background: #000;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
-@keyframes flicker{0%{opacity:1}100%{opacity:0.88}}
-.color-btn{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
-.color-btn.active{border-color:#fff;}
-.color-blue{background:#00aff;}
-.color-red{background:#f00;}
-.color-green{background:#0f0;}
-.color-purple{background:#a0f;}
-.color-yellow{background:#ff0;}
-#hud{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
-.hud-corner{position:absolute;width:40px;height:40px;}
-.hud-corner::before,.hud-corner::after{content:'';position:absolute;background:#0ff;box-shadow:0 0 10px #0ff;}
-.hud-corner::before{width:20px;height:2px;}
-.hud-corner::after{width:2px;height:20px;}
-.hud-top-left{top:20px;left:20px;}
-.hud-top-left::before{top:0;left:0;}
-.hud-top-left::after{top:0;left:0;}
-.hud-top-right{top:20px;right:20px;}
-.hud-top-right::before{top:0;right:0;}
-.hud-top-right::after{top:0;right:0;}
-.hud-bottom-left{bottom:20px;left:20px;}
-.hud-bottom-left::before{bottom:0;left:0;}
-.hud-bottom-left::after{bottom:0;left:0;}
-.hud-bottom-right{bottom:20px;right:20px;}
-.hud-bottom-right::before{bottom:0;right:0;}
-.hud-bottom-right::after{bottom:0;right:0;}
-#controls{position:absolute;bottom:40px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:20px;pointer-events:all;z-index:20;}
-#color-selector{display:flex;gap:12px;}
-.btn-group{display:flex;gap:12px;}
-.btn{padding:12px 24px;background:linear-gradient(135deg,#333,#111);color:#fff;border:2px solid #0ff;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:1px;box-shadow:0 0 20px #0ff4;}
-.btn:active{transform:scale(0.95);}
-.btn-capture{background:linear-gradient(135deg,#0ff,#08f);border-color:#0ff;}
-#start-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#000,#001a2e);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
-#start-screen h1{font-size:48px;color:#0ff;text-shadow:0 0 20px #0ff;margin-bottom:20px;text-transform:uppercase;letter-spacing:4px;}
-#start-screen .subtitle{font-size:18px;color:#7af;margin-bottom:60px;}
-#start-btn{padding:20px 60px;font-size:24px;}
+
+/* ── START SCREEN ── */
+#start-screen {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 50% 55%, #001a33 0%, #000510 55%, #000 100%);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 100;
+}
+
+.demo-saber { position: relative; width: 20px; height: 252px; margin-bottom: 36px; }
+
+.demo-blade {
+  width: 10px; height: 190px;
+  border-radius: 5px 5px 2px 2px;
+  background: linear-gradient(to top, #fff 0%, #00e5ff 30%, #007fff 70%, transparent);
+  box-shadow: 0 0 10px #00e5ff, 0 0 30px 10px #0055ff88, 0 0 60px 20px #0033ff44;
+  animation: flicker .14s infinite alternate, blade-extend .8s cubic-bezier(.15,0,0,1) forwards;
+  transform-origin: bottom center;
+  margin: 0 auto;
+}
+
+.demo-hilt {
+  width: 18px; height: 52px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #aaa, #444, #888, #333);
+  border: 2px solid #888;
+  margin: 4px auto 0;
+}
+
+@keyframes flicker { to { opacity: .9; filter: brightness(1.06); } }
+@keyframes blade-extend { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+.start-title {
+  font-size: clamp(28px, 8vw, 52px);
+  font-weight: 900; letter-spacing: 6px; text-transform: uppercase;
+  color: #fff; text-shadow: 0 0 20px #00e5ff, 0 0 60px #0055ff;
+  margin-bottom: 6px;
+}
+
+.start-sub {
+  font-size: 13px; color: #4a6880;
+  letter-spacing: 4px; text-transform: uppercase;
+  margin-bottom: 48px;
+}
+
+#start-btn {
+  padding: 15px 52px; font-size: 17px; font-weight: 700;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: #000; background: #00e5ff;
+  border: none; border-radius: 4px; cursor: pointer;
+  box-shadow: 0 0 24px #00e5ff, 0 0 60px #0066ff88;
+  transition: transform .15s;
+}
+#start-btn:active { transform: scale(.95); }
+
+/* ── APP ── */
+#app { width: 100vw; height: 100vh; position: relative; background: #000; }
+
+#camera-container { position: absolute; inset: 0; overflow: hidden; }
+
+#video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* scanlines */
+#camera-container::after {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom, transparent 0px, transparent 3px,
+    rgba(0,0,0,.07) 3px, rgba(0,0,0,.07) 4px
+  );
+  pointer-events: none; z-index: 1;
+}
+
+/* vignette */
+#camera-container::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,.65) 100%);
+  pointer-events: none; z-index: 2;
+}
+
+/* ── HUD ── */
+#hud { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+
+.hc { position: absolute; width: 44px; height: 44px; }
+.hc::before, .hc::after {
+  content: ''; position: absolute;
+  background: var(--cyan); box-shadow: 0 0 6px var(--cyan);
+}
+.hc::before { width: 22px; height: 2px; }
+.hc::after  { width: 2px;  height: 22px; }
+.tl { top: 16px; left: 16px; }
+.tl::before { top: 0; left: 0; } .tl::after { top: 0; left: 0; }
+.tr { top: 16px; right: 16px; }
+.tr::before { top: 0; right: 0; } .tr::after { top: 0; right: 0; }
+.bl { bottom: 16px; left: 16px; }
+.bl::before { bottom: 0; left: 0; } .bl::after { bottom: 0; left: 0; }
+.br { bottom: 16px; right: 16px; }
+.br::before { bottom: 0; right: 0; } .br::after { bottom: 0; right: 0; }
+
+/* center reticle */
+#hud::after {
+  content: ''; position: absolute;
+  top: 50%; left: 50%;
+  width: 48px; height: 48px;
+  margin: -24px 0 0 -24px;
+  border: 1px solid rgba(0,229,255,.25);
+  border-radius: 50%;
+}
+
+/* ── SABER ── */
+#saber-wrapper {
+  position: absolute;
+  pointer-events: none; touch-action: none; user-select: none;
+  z-index: 15;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+#blade {
+  width: 10px; height: var(--blade-h);
+  border-radius: 5px 5px 2px 2px;
+  background: linear-gradient(to top, #fff 0%, #00e5ff 30%, #007fff 70%, transparent);
+  box-shadow: 0 0 8px #00e5ff, 0 0 24px 10px #00aaff88, 0 0 48px 20px #0055ff44;
+  animation: flicker .12s infinite alternate;
+}
+
+#hilt {
+  width: 20px; height: 56px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #aaa, #444, #888, #333, #aaa);
+  border: 2px solid #888;
+  box-shadow: 0 2px 8px rgba(0,0,0,.6), inset 0 1px 2px rgba(255,255,255,.18);
+  margin-top: 2px; position: relative;
+}
+#hilt::before, #hilt::after {
+  content: ''; position: absolute;
+  left: -2px; right: -2px; height: 4px;
+  background: linear-gradient(to right, #555, #bbb, #555);
+  border-radius: 1px;
+}
+#hilt::before { top: 11px; }
+#hilt::after  { top: 23px; }
+
+/* ── FLASH ── */
+#flash {
+  position: fixed; inset: 0; background: #fff;
+  opacity: 0; pointer-events: none; z-index: 999;
+}
+@keyframes flash-anim { 0% { opacity: .85; } 100% { opacity: 0; } }
+#flash.go { animation: flash-anim .45s ease-out forwards; }
+
+/* ── CONTROLS ── */
+#controls {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 16px 20px max(32px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  z-index: 20;
+  background: linear-gradient(to top, rgba(0,0,0,.78) 0%, transparent 100%);
+  pointer-events: none;
+}
+#controls > * { pointer-events: all; }
+
+#color-selector { display: flex; gap: 9px; align-items: center; }
+
+.color-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; border: 2.5px solid transparent;
+  transition: transform .18s, border-color .18s, box-shadow .18s;
+}
+.color-btn.active { border-color: #fff; transform: scale(1.25); }
+
+.color-btn[data-color=blue]   { background: #00aaff; box-shadow: 0 0 8px #00aaff; }
+.color-btn[data-color=red]    { background: #ff2020; box-shadow: 0 0 8px #ff2020; }
+.color-btn[data-color=green]  { background: #00ee44; box-shadow: 0 0 8px #00ee44; }
+.color-btn[data-color=purple] { background: #aa00ff; box-shadow: 0 0 8px #aa00ff; }
+.color-btn[data-color=yellow] { background: #ffee00; box-shadow: 0 0 8px #ffee00; }
+.color-btn[data-color=orange] { background: #ff7700; box-shadow: 0 0 8px #ff7700; }
+.color-btn[data-color=white]  { background: #ddeeff; box-shadow: 0 0 8px #ddeeff; }
+.color-btn.active[data-color=blue]   { box-shadow: 0 0 14px 3px #00aaff; }
+.color-btn.active[data-color=red]    { box-shadow: 0 0 14px 3px #ff2020; }
+.color-btn.active[data-color=green]  { box-shadow: 0 0 14px 3px #00ee44; }
+.color-btn.active[data-color=purple] { box-shadow: 0 0 14px 3px #aa00ff; }
+.color-btn.active[data-color=yellow] { box-shadow: 0 0 14px 3px #ffee00; }
+.color-btn.active[data-color=orange] { box-shadow: 0 0 14px 3px #ff7700; }
+.color-btn.active[data-color=white]  { box-shadow: 0 0 14px 3px #ddeeff; }
+
+#slider-row {
+  display: flex; align-items: center; gap: 10px;
+  color: #4a6880; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+}
+
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 110px; height: 3px;
+  border-radius: 2px; background: #1a3a5a; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--cyan); box-shadow: 0 0 8px var(--cyan); cursor: pointer;
+}
+
+#action-row { display: flex; gap: 14px; align-items: center; }
+
+.btn {
+  padding: 11px 20px;
+  background: rgba(0,15,30,.85);
+  color: var(--cyan); border: 1.5px solid var(--cyan);
+  border-radius: 6px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: transform .15s, filter .15s;
+  text-transform: uppercase; letter-spacing: 2px;
+  box-shadow: 0 0 10px rgba(0,229,255,.3);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.btn:active { transform: scale(.92); filter: brightness(1.4); }
+
+.btn-capture {
+  width: 68px; height: 68px; border-radius: 50%;
+  padding: 0; font-size: 11px; font-weight: 900; letter-spacing: 1.5px;
+  border-width: 3px;
+  box-shadow: 0 0 20px rgba(0,229,255,.5), inset 0 0 12px rgba(0,229,255,.15);
+  position: relative; overflow: hidden;
+}
+.btn-capture::before {
+  content: ''; position: absolute; inset: 6px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,229,255,.35), transparent);
+}
+
+.btn-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  padding: 0; font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-muted { opacity: .4; }
+
+/* ── PREVIEW ── */
+#preview {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.92);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 200; gap: 18px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#preview.visible { opacity: 1; pointer-events: all; }
+
+#preview-img {
+  max-width: 88vw; max-height: 68vh;
+  border-radius: 8px;
+  border: 1px solid rgba(0,229,255,.4);
+  box-shadow: 0 0 40px rgba(0,80,255,.3);
+}
+
+#preview-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 </style>
 </head>
 <body>
-<div id="app">
+
+<div id="flash"></div>
+
+<!-- Écran d'accueil -->
 <div id="start-screen">
-<h1>Lightsaber AR</h1>
-<p class="subtitle">Activate your camera</p>
-<button class="btn btn-capture" id="start-btn">START</button>
+  <div class="demo-saber">
+    <div class="demo-blade"></div>
+    <div class="demo-hilt"></div>
+  </div>
+  <h1 class="start-title">Lightsaber</h1>
+  <p class="start-sub">AR Camera</p>
+  <button id="start-btn">ACTIVER</button>
 </div>
-<div id="camera-container" style="display:none;">
-<video id="video" playsinline autoplay></video>
-<canvas id="canvas-overlay"></canvas>
-<div id="hud">
-<div class="hud-corner hud-top-left"></div>
-<div class="hud-corner hud-top-right"></div>
-<div class="hud-corner hud-bottom-left"></div>
-<div class="hud-corner hud-bottom-right"></div>
+
+<!-- App -->
+<div id="app" style="display:none">
+  <div id="camera-container">
+    <video id="video" playsinline autoplay muted></video>
+    <div id="hud">
+      <div class="hc tl"></div>
+      <div class="hc tr"></div>
+      <div class="hc bl"></div>
+      <div class="hc br"></div>
+    </div>
+    <div id="saber-wrapper">
+      <div id="blade"></div>
+      <div id="hilt"></div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div id="color-selector">
+      <div class="color-btn active" data-color="blue"   title="Bleu (1)"></div>
+      <div class="color-btn"        data-color="red"    title="Rouge (2)"></div>
+      <div class="color-btn"        data-color="green"  title="Vert (3)"></div>
+      <div class="color-btn"        data-color="purple" title="Violet (4)"></div>
+      <div class="color-btn"        data-color="yellow" title="Jaune (5)"></div>
+      <div class="color-btn"        data-color="orange" title="Orange (6)"></div>
+      <div class="color-btn"        data-color="white"  title="Blanc (7)"></div>
+    </div>
+    <div id="slider-row">
+      <span>Lame</span>
+      <input type="range" id="blade-slider" min="80" max="320" value="200">
+    </div>
+    <div id="action-row">
+      <button class="btn btn-icon" id="flip-btn"    title="Retourner (F)">⟳</button>
+      <button class="btn btn-capture" id="capture-btn">PIC</button>
+      <button class="btn btn-icon" id="sound-btn"   title="Son (M)">🔊</button>
+    </div>
+  </div>
 </div>
-<div id="saber-wrapper">
-<div id="saber">
-<div id="blade"></div>
-<div id="hilt"></div>
+
+<!-- Prévisualisation -->
+<div id="preview">
+  <img id="preview-img" alt="Capture">
+  <div id="preview-btns">
+    <button class="btn" id="download-btn">💾 SAUVEGARDER</button>
+    <button class="btn" id="close-btn">✕ FERMER</button>
+  </div>
 </div>
-</div>
-</div>
-<div id="controls" style="display:none;">
-<div id="color-selector">
-<div class="color-btn color-blue active" data-color="blue"></div>
-<div class="color-btn color-red" data-color="red"></div>
-<div class="color-btn color-green" data-color="green"></div>
-<div class="color-btn color-purple" data-color="purple"></div>
-<div class="color-btn color-yellow" data-color="yellow"></div>
-</div>
-<div class="btn-group">
-<button class="btn btn-capture" id="capture-btn">CAPTURE</button>
-</div>
-</div>
-</div>
+
 <script>
-const video=document.getElementById('video');
-const canvas=document.getElementById('canvas-overlay');
-const ctx=canvas.getContext('2d');
-const saberWrapper=document.getElementById('saber-wrapper');
-const blade=document.getElementById('blade');
-const startScreen=document.getElementById('start-screen');
-const cameraContainer=document.getElementById('camera-container');
-const controls=document.getElementById('controls');
-const startBtn=document.getElementById('start-btn');
-const captureBtn=document.getElementById('capture-btn');
-const colorBtns=document.querySelectorAll('.color-btn');
-let currentColor='blue';
-const colors={
-blue:{gradient:'linear-gradient(to top,#fff 0%,#00f0ff 30%,#00aff 70%,transparent 100%)',glow:'#00ccff'},
-red:{gradient:'linear-gradient(to top,#fff 0%,#ff4040 30%,#f00 70%,transparent 100%)',glow:'#ff0000'},
-green:{gradient:'linear-gradient(to top,#fff 0%,#40ff40 30%,#0f0 70%,transparent 100%)',glow:'#00ff00'},
-purple:{gradient:'linear-gradient(to top,#fff 0%,#d040ff 30%,#a0f 70%,transparent 100%)',glow:'#aa00ff'},
-yellow:{gradient:'linear-gradient(to top,#fff 0%,#ffff40 30%,#ff0 70%,transparent 100%)',glow:'#ffff00'}
+// ── COULEURS ──────────────────────────────────────────────────
+const COLORS = {
+  blue:   { top: '#fff', mid1: '#00e5ff', mid2: '#007fff', glow: '#00aaff' },
+  red:    { top: '#fff', mid1: '#ff6060', mid2: '#ff0000', glow: '#ff2020' },
+  green:  { top: '#fff', mid1: '#60ff70', mid2: '#00dd00', glow: '#00ee44' },
+  purple: { top: '#fff', mid1: '#dd60ff', mid2: '#aa00ff', glow: '#cc00ff' },
+  yellow: { top: '#fff', mid1: '#ffff60', mid2: '#ffdd00', glow: '#ffee00' },
+  orange: { top: '#fff', mid1: '#ffbb44', mid2: '#ff6600', glow: '#ff8800' },
+  white:  { top: '#fff', mid1: '#eef4ff', mid2: '#c0d4ff', glow: '#ddeeff' },
 };
-function setBladeColor(color){
-currentColor=color;
-const c=colors[color];
-blade.style.background=c.gradient;
-blade.style.boxShadow=`0 0 8px ${c.glow},0 0 20px 8px ${c.glow}88,0 0 40px 16px ${c.glow}44`;
+
+// ── STATE ─────────────────────────────────────────────────────
+let color     = 'blue';
+let facing    = 'environment';
+let stream    = null;
+let soundOn   = true;
+let saberAngle = 0;
+let prevX     = window.innerWidth  / 2;
+let prevY     = window.innerHeight / 2;
+let velX      = 0, velY = 0;
+let bladeLen  = 200;
+let capBlob   = null;
+let audioCtx  = null;
+let humGain   = null;
+let lastSwing = 0;
+let curX      = window.innerWidth  / 2;
+let curY      = window.innerHeight / 2;
+
+// ── DOM ───────────────────────────────────────────────────────
+const $           = id => document.getElementById(id);
+const startScreen = $('start-screen');
+const startBtn    = $('start-btn');
+const app         = $('app');
+const video       = $('video');
+const blade       = $('blade');
+const saberWrap   = $('saber-wrapper');
+const flashEl     = $('flash');
+const flipBtn     = $('flip-btn');
+const soundBtn    = $('sound-btn');
+const captureBtn  = $('capture-btn');
+const bladeSlider = $('blade-slider');
+const preview     = $('preview');
+const previewImg  = $('preview-img');
+const downloadBtn = $('download-btn');
+const closeBtn    = $('close-btn');
+const colorBtns   = document.querySelectorAll('.color-btn');
+
+// ── AUDIO ─────────────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  humGain = audioCtx.createGain();
+  humGain.gain.value = 0;
+  humGain.connect(audioCtx.destination);
+
+  // Bourdonnement: 3 oscillateurs
+  [120, 240, 480].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const g   = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    g.gain.value = [.22, .10, .05][i];
+    osc.connect(g);
+    g.connect(humGain);
+    osc.start();
+  });
+
+  // Son d'allumage
+  const t  = audioCtx.currentTime;
+  const sw = audioCtx.createOscillator();
+  const sg = audioCtx.createGain();
+  sw.type = 'sawtooth';
+  sw.frequency.setValueAtTime(160, t);
+  sw.frequency.exponentialRampToValueAtTime(880, t + .65);
+  sg.gain.setValueAtTime(.18, t);
+  sg.gain.exponentialRampToValueAtTime(.001, t + .65);
+  sw.connect(sg);
+  sg.connect(audioCtx.destination);
+  sw.start(); sw.stop(t + .65);
+
+  humGain.gain.setValueAtTime(0, t + .35);
+  humGain.gain.linearRampToValueAtTime(.12, t + 1.0);
 }
-colorBtns.forEach(btn=>{
-btn.addEventListener('click',()=>{
-colorBtns.forEach(b=>b.classList.remove('active'));
-btn.classList.add('active');
-setBladeColor(btn.dataset.color);
-});
-});
-let mouseX=window.innerWidth/2,mouseY=window.innerHeight/2;
-function updateSaberPosition(x,y){
-saberWrapper.style.left=x+'px';
-saberWrapper.style.top=y+'px';
-saberWrapper.style.transform='translate(-50%,-50%)';
+
+function playSwing(intensity) {
+  if (!audioCtx || !soundOn) return;
+  const t   = audioCtx.currentTime;
+  const len = Math.floor(audioCtx.sampleRate * .22);
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d   = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+
+  const src = audioCtx.createBufferSource();
+  const bpf = audioCtx.createBiquadFilter();
+  const g   = audioCtx.createGain();
+  src.buffer = buf;
+  bpf.type = 'bandpass';
+  bpf.frequency.value = 450 + intensity * 700;
+  bpf.Q.value = 1.3;
+  g.gain.setValueAtTime(Math.min(intensity * .3, .3), t);
+  g.gain.exponentialRampToValueAtTime(.001, t + .22);
+  src.connect(bpf); bpf.connect(g); g.connect(audioCtx.destination);
+  src.start();
 }
-document.addEventListener('mousemove',e=>{
-mouseX=e.clientX;
-mouseY=e.clientY;
-updateSaberPosition(mouseX,mouseY);
-});
-document.addEventListener('touchmove',e=>{
-if(e.touches.length>0){
-const touch=e.touches[0];
-mouseX=touch.clientX;
-mouseY=touch.clientY;
-updateSaberPosition(mouseX,mouseY);
+
+function playSnap() {
+  if (!audioCtx || !soundOn) return;
+  const t = audioCtx.currentTime;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'square';
+  o.frequency.setValueAtTime(2000, t);
+  o.frequency.exponentialRampToValueAtTime(300, t + .12);
+  g.gain.setValueAtTime(.07, t);
+  g.gain.exponentialRampToValueAtTime(.001, t + .12);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(t + .12);
 }
-},{passive:false});
-startBtn.addEventListener('click',async()=>{
-try{
-const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-video.srcObject=stream;
-startScreen.style.display='none';
-cameraContainer.style.display='block';
-controls.style.display='flex';
-canvas.width=video.videoWidth;
-canvas.height=video.videoHeight;
-}catch(err){
-alert('Camera access denied');
+
+// ── COULEUR DU SABRE ──────────────────────────────────────────
+function applyColor(name) {
+  color = name;
+  const c = COLORS[name];
+  blade.style.background =
+    `linear-gradient(to top, ${c.top} 0%, ${c.mid1} 30%, ${c.mid2} 70%, transparent 100%)`;
+  blade.style.boxShadow =
+    `0 0 8px ${c.glow}, 0 0 24px 10px ${c.glow}88, 0 0 48px 20px ${c.glow}44`;
 }
+
+colorBtns.forEach(b => {
+  b.addEventListener('click', () => {
+    colorBtns.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    applyColor(b.dataset.color);
+  });
 });
-captureBtn.addEventListener('click',()=>{
-const captureCanvas=document.createElement('canvas');
-captureCanvas.width=video.videoWidth;
-captureCanvas.height=video.videoHeight;
-const captureCtx=captureCanvas.getContext('2d');
-captureCtx.drawImage(video,0,0);
-const rect=saberWrapper.getBoundingClientRect();
-const videoRect=video.getBoundingClientRect();
-const scaleX=video.videoWidth/videoRect.width;
-const scaleY=video.videoHeight/videoRect.height;
-const saberX=(rect.left+rect.width/2-videoRect.left)*scaleX;
-const saberY=(rect.top+rect.height/2-videoRect.top)*scaleY;
-const bladeHeight=180*Math.min(scaleX,scaleY);
-const bladeWidth=16*Math.min(scaleX,scaleY);
-const c=colors[currentColor];
-const gradient=captureCtx.createLinearGradient(saberX,saberY,saberX,saberY-bladeHeight);
-gradient.addColorStop(0,'#ffffff');
-if(currentColor==='blue'){gradient.addColorStop(0.3,'#00f0ff');gradient.addColorStop(0.7,'#00aaff');}
-else if(currentColor==='red'){gradient.addColorStop(0.3,'#ff4040');gradient.addColorStop(0.7,'#ff0000');}
-else if(currentColor==='green'){gradient.addColorStop(0.3,'#40ff40');gradient.addColorStop(0.7,'#00ff00');}
-else if(currentColor==='purple'){gradient.addColorStop(0.3,'#d040ff');gradient.addColorStop(0.7,'#aa00ff');}
-else if(currentColor==='yellow'){gradient.addColorStop(0.3,'#ffff40');gradient.addColorStop(0.7,'#ffff00');}
-gradient.addColorStop(1,'rgba(0,0,0,0)');
-captureCtx.shadowBlur=40;
-captureCtx.shadowColor=c.glow;
-captureCtx.fillStyle=gradient;
-captureCtx.fillRect(saberX-bladeWidth/2,saberY-bladeHeight,bladeWidth,bladeHeight);
-const hiltHeight=64*Math.min(scaleX,scaleY);
-const hiltWidth=22*Math.min(scaleX,scaleY);
-captureCtx.shadowBlur=0;
-const hiltGrad=captureCtx.createLinearGradient(saberX,saberY,saberX,saberY+hiltHeight);
-hiltGrad.addColorStop(0,'#888888');
-hiltGrad.addColorStop(0.25,'#333333');
-hiltGrad.addColorStop(0.5,'#999999');
-hiltGrad.addColorStop(0.75,'#444444');
-hiltGrad.addColorStop(1,'#666666');
-captureCtx.fillStyle=hiltGrad;
-captureCtx.fillRect(saberX-hiltWidth/2,saberY,hiltWidth,hiltHeight);
-captureCanvas.toBlob(blob=>{
-const url=URL.createObjectURL(blob);
-const a=document.createElement('a');
-a.href=url;
-a.download='lightsaber_'+Date.now()+'.jpg';
-a.click();
-URL.revokeObjectURL(url);
+
+// ── LONGUEUR DE LAME ──────────────────────────────────────────
+bladeSlider.addEventListener('input', () => {
+  bladeLen = +bladeSlider.value;
+  document.documentElement.style.setProperty('--blade-h', bladeLen + 'px');
 });
+
+// ── MOUVEMENT DU SABRE ────────────────────────────────────────
+function moveSaber(x, y) {
+  curX = x; curY = y;
+  const dx = x - prevX, dy = y - prevY;
+  velX = velX * .68 + dx * .32;
+  velY = velY * .68 + dy * .32;
+  const spd = Math.sqrt(velX * velX + velY * velY);
+
+  if (spd > 1.2) {
+    // Le sabre tourne pour pointer dans la direction du mouvement
+    const target = Math.atan2(velX, -velY);
+    let diff = target - saberAngle;
+    if (diff >  Math.PI) diff -= 2 * Math.PI;
+    if (diff < -Math.PI) diff += 2 * Math.PI;
+    saberAngle += diff * Math.min(.12 + spd * .004, .38);
+
+    // Son de swing
+    const now = Date.now();
+    if (spd > 12 && now - lastSwing > 170 && soundOn) {
+      playSwing(Math.min(spd / 55, 1));
+      lastSwing = now;
+    }
+  } else {
+    saberAngle *= .92; // retour à la verticale
+  }
+
+  prevX = x; prevY = y;
+  saberWrap.style.left      = x + 'px';
+  saberWrap.style.top       = y + 'px';
+  saberWrap.style.transform = `translate(-50%, -50%) rotate(${saberAngle}rad)`;
+}
+
+// Position initiale (centre)
+saberWrap.style.left = curX + 'px';
+saberWrap.style.top  = curY + 'px';
+
+document.addEventListener('mousemove', e => moveSaber(e.clientX, e.clientY));
+
+document.addEventListener('touchmove', e => {
+  e.preventDefault();
+  moveSaber(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+document.addEventListener('touchstart', e => {
+  prevX = e.touches[0].clientX;
+  prevY = e.touches[0].clientY;
+  moveSaber(prevX, prevY);
+}, { passive: true });
+
+// ── CAMÉRA ────────────────────────────────────────────────────
+async function startCamera(facingMode) {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    // Miroir pour la caméra frontale (selfie)
+    video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : '';
+    facing = facingMode;
+  } catch (e) {
+    alert('Accès caméra refusé : ' + e.message);
+  }
+}
+
+startBtn.addEventListener('click', async () => {
+  initAudio();
+  await startCamera(facing);
+  startScreen.style.display = 'none';
+  app.style.display = 'block';
 });
+
+flipBtn.addEventListener('click', () =>
+  startCamera(facing === 'environment' ? 'user' : 'environment')
+);
+
+// ── SON ───────────────────────────────────────────────────────
+soundBtn.addEventListener('click', () => {
+  soundOn = !soundOn;
+  soundBtn.textContent = soundOn ? '🔊' : '🔇';
+  soundBtn.classList.toggle('btn-muted', !soundOn);
+  if (humGain) {
+    humGain.gain.linearRampToValueAtTime(
+      soundOn ? .12 : 0,
+      audioCtx.currentTime + .3
+    );
+  }
+});
+
+// ── RACCOURCIS CLAVIER ────────────────────────────────────────
+const keyMap = { '1':'blue','2':'red','3':'green','4':'purple','5':'yellow','6':'orange','7':'white' };
+document.addEventListener('keydown', e => {
+  if (e.key === ' ') { e.preventDefault(); captureBtn.click(); }
+  if (e.key.toLowerCase() === 'f') flipBtn.click();
+  if (e.key.toLowerCase() === 'm') soundBtn.click();
+  const col = keyMap[e.key];
+  if (col) document.querySelector(`.color-btn[data-color="${col}"]`).click();
+});
+
+// ── CAPTURE ───────────────────────────────────────────────────
+captureBtn.addEventListener('click', () => {
+  if (!video.videoWidth) return;
+  playSnap();
+
+  // Flash
+  flashEl.classList.remove('go');
+  void flashEl.offsetWidth;
+  flashEl.classList.add('go');
+
+  const vw  = video.videoWidth;
+  const vh  = video.videoHeight;
+  const cvs = document.createElement('canvas');
+  cvs.width = vw; cvs.height = vh;
+  const ctx = cvs.getContext('2d');
+
+  // Dessin de la vidéo brute (sans le CSS mirror)
+  ctx.drawImage(video, 0, 0);
+
+  // Mapping position écran → coordonnées vidéo
+  const vr    = video.getBoundingClientRect();
+  const sx    = vw / vr.width;
+  const sy    = vh / vr.height;
+  const scale = Math.min(sx, sy);
+
+  let px = (curX - vr.left) * sx;
+  let py = (curY - vr.top)  * sy;
+  let drawAngle = saberAngle;
+
+  // Caméra frontale : miroir horizontal + inversion de l'angle
+  if (facing === 'user') {
+    px = vw - px;
+    drawAngle = -drawAngle;
+  }
+
+  px = Math.max(0, Math.min(vw, px));
+  py = Math.max(0, Math.min(vh, py));
+
+  const bh = bladeLen * scale;
+  const bw = 10       * scale;
+  const hh = 56       * scale;
+  const hw = 20       * scale;
+  const c  = COLORS[color];
+
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(drawAngle);
+
+  // Lame : 4 passes de glow
+  for (const [blur, alpha] of [[64, .22], [28, .50], [10, .80], [2, 1]]) {
+    const grad = ctx.createLinearGradient(0, 0, 0, -bh);
+    grad.addColorStop(0,   c.top);
+    grad.addColorStop(.3,  c.mid1);
+    grad.addColorStop(.7,  c.mid2);
+    grad.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.save();
+    ctx.globalAlpha  = alpha;
+    ctx.shadowBlur   = blur;
+    ctx.shadowColor  = c.glow;
+    ctx.fillStyle    = grad;
+    ctx.fillRect(-bw / 2, -bh, bw, bh);
+    ctx.restore();
+  }
+
+  // Poignée
+  const hg = ctx.createLinearGradient(0, 0, 0, hh);
+  hg.addColorStop(0,   '#aaaaaa');
+  hg.addColorStop(.25, '#333333');
+  hg.addColorStop(.5,  '#999999');
+  hg.addColorStop(.75, '#444444');
+  hg.addColorStop(1,   '#666666');
+  ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  ctx.fillStyle = hg;
+  ctx.fillRect(-hw / 2, 0, hw, hh);
+
+  // Anneaux décoratifs
+  ctx.fillStyle = '#bbbbbb';
+  ctx.fillRect(-hw / 2 - 1, 11 * scale, hw + 2, 3 * scale);
+  ctx.fillRect(-hw / 2 - 1, 22 * scale, hw + 2, 3 * scale);
+
+  ctx.restore();
+
+  cvs.toBlob(b => {
+    capBlob = b;
+    const url = URL.createObjectURL(b);
+    previewImg.src = url;
+    preview.classList.add('visible');
+  }, 'image/jpeg', .94);
+});
+
+// ── PRÉVISUALISATION ──────────────────────────────────────────
+downloadBtn.addEventListener('click', () => {
+  if (!capBlob) return;
+  const url = URL.createObjectURL(capBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'lightsaber_' + Date.now() + '.jpg';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+closeBtn.addEventListener('click', () => {
+  preview.classList.remove('visible');
+  if (previewImg.src.startsWith('blob:')) URL.revokeObjectURL(previewImg.src);
+  previewImg.src = '';
+  capBlob = null;
+});
+
+// Partage natif si disponible
+if (navigator.share) {
+  const shareBtn = document.createElement('button');
+  shareBtn.className = 'btn';
+  shareBtn.textContent = '↑ PARTAGER';
+  shareBtn.addEventListener('click', async () => {
+    if (!capBlob) return;
+    try {
+      const file = new File([capBlob], 'lightsaber.jpg', { type: 'image/jpeg' });
+      await navigator.share({ files: [file], title: 'Lightsaber AR' });
+    } catch {}
+  });
+  document.getElementById('preview-btns').prepend(shareBtn);
+}
 </script>
 </body>
 </html>
